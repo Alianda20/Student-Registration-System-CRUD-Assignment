@@ -1,6 +1,15 @@
 <?php
 
-// Include the database connection
+session_start();
+
+if(!isset($_SESSION['user'])){
+    header("Location: login.php");
+    exit();
+}
+if($_SESSION['role'] != "admin"){
+    die("Access Denied");
+}
+
 include("db.php");
 
 // Check if the ID is provided

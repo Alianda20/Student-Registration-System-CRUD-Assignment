@@ -1,6 +1,16 @@
 <?php
 
-// Connect to the database
+session_start();
+
+if(!isset($_SESSION['user'])){
+    header("Location: login.php");
+    exit();
+}
+if($_SESSION['role'] != "admin"){
+    die("Access Denied");
+}
+
+
 include("db.php");
 
 // Receive updated data

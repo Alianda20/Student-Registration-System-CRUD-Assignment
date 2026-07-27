@@ -1,6 +1,15 @@
 <?php
 
-// Connect to the database
+session_start();
+
+if(!isset($_SESSION['user'])){
+    header("Location: login.php");
+    exit();
+}
+if($_SESSION['role'] != "admin"){
+    die("Access Denied");
+}
+
 include("db.php");
 
 // Get the student's ID from the URL
@@ -22,6 +31,7 @@ $row = mysqli_fetch_assoc($result);
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+       <?php include("menu.php"); ?>
 
 <h2>Edit Student Details</h2>
 
