@@ -1,12 +1,16 @@
 <?php
 
-// Start the session
 session_start();
 
-// Destroy all session data
+include("db.php");
+include("log_activity.php");
+
+if(isset($_SESSION['user'])){
+    logActivity($conn, $_SESSION['user'], "Logged Out");
+}
+
 session_destroy();
 
-// Redirect to the login page
 header("Location: login.php");
 exit();
 

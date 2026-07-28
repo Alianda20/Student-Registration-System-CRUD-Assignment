@@ -1,39 +1,37 @@
 <?php
-
 session_start();
 
-if(!isset($_SESSION['user'])){
+if (!isset($_SESSION['user'])) {
     header("Location: login.php");
     exit();
 }
-if($_SESSION['role'] != "admin"){
+
+if ($_SESSION['role'] != "admin") {
     die("Access Denied");
 }
 
 include("db.php");
+include("log_activity.php");
 
-// Check if the ID is provided
-if(isset($_GET['id'])){
+$reg_no = $_GET['reg_no'];
 
-    $id = $_GET['id'];
+$stmt = $conn->prepare("DELETE FROM students WHERE reg_no=?");
 
-    // SQL query to delete the student
-    $sql = "DELETE FROM students WHERE id = $id";
+$stmt->bind_param("s", $reg_no);
 
-    if(mysqli_query($conn, $sql)){
-        // Redirect back to the student list
-        header("Location: view_students.php");
-        exit();
-    }
-    else{
-        echo "Error deleting record: " . mysqli_error($conn);
-    }
+if ($stmt->execute()) {
+
+    header("Location: view_students.php");
+    exit();
+
+} else {
+
+    echo "Delete Failed.";
 
 }
-else{
-    echo "No student selected.";
-}
+logActivity($conn, $_SESSION['user'], "Deleted Student: $reg_no");
 
-mysqli_close($conn);
+$stmt->close();
+$conn->close();
 
 ?>

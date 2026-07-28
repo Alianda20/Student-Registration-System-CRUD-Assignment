@@ -5,14 +5,18 @@ session_start();
 
 // Connect to the database
 include("db.php");
-
+include("log_activity.php");
 // Receive form data
-$email = $_POST['email'];
+$email = trim($_POST['email']);
 $password = $_POST['password'];
 
-// Find the user by email
-$sql = "SELECT * FROM users WHERE email='$email'";
-$result = mysqli_query($conn, $sql);
+$stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
+
+$stmt->bind_param("s", $email);
+
+$stmt->execute();
+
+$result = $stmt->get_result();
 
 // Check if the user exists
 if(mysqli_num_rows($result) > 0){
@@ -26,6 +30,7 @@ if(mysqli_num_rows($result) > 0){
         // Store user information in the session
         $_SESSION['user'] = $user['full_name'];
         $_SESSION['role'] = $user['role'];
+        logActivity($conn, $_SESSION['user'], "Logged In");
 
         // Redirect to the student list
         header("Location: view_students.php");

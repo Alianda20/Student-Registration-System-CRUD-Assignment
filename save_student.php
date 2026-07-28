@@ -1,54 +1,141 @@
 <?php
-
 session_start();
 
-if(!isset($_SESSION['user'])){
+// Ensure user is logged in
+if (!isset($_SESSION['user'])) {
     header("Location: login.php");
     exit();
 }
-if($_SESSION['role'] != "admin"){
+
+// Only administrators can add students
+if ($_SESSION['role'] != "admin") {
     die("Access Denied");
 }
 
 include("db.php");
+include("log_activity.php");
 
-// Receive data from the form
-$reg_no = $_POST['reg_no'];
-$full_name = $_POST['full_name'];
-$course = $_POST['course'];
-$gender = $_POST['gender'];
-$email = $_POST['email'];
+// =======================
+// RECEIVE FORM DATA
+// =======================
+
+$reg_no = trim($_POST['reg_no']);
+$full_name = trim($_POST['full_name']);
+$course = trim($_POST['course']);
+$gender = trim($_POST['gender']);
+$phone = trim($_POST['phone']);
+$email = trim($_POST['email']);
+
+
+// =======================
+// VALIDATION
+// =======================
+
+// Name
+if (empty($full_name)) {
+    die("Student name cannot be empty.");
+}
+
+// Course
+if (empty($course)) {
+    die("Please select a course.");
+}
+
+// Email
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    die("Invalid email address.");
+}
+
+// Phone (10–15 digits)
+if (!preg_match('/^[0-9]{10,15}$/', $phone)) {
+    die("Invalid phone number.");
+}
+
+
+// =======================
+// CHECK DUPLICATE REG NO
+// =======================
+
+$check = $conn->prepare("SELECT reg_no FROM students WHERE reg_no=?");
+$check->bind_param("s", $reg_no);
+$check->execute();
+$result = $check->get_result();
+
+if ($result->num_rows > 0) {
+    die("Registration number already exists.");
+}
+
+$check->close();
+
+
+// =======================
+// PHOTO UPLOAD
+// =======================
+
 $photo = $_FILES['photo']['name'];
 $tmp = $_FILES['photo']['tmp_name'];
 
-$type = strtolower(pathinfo($photo, PATHINFO_EXTENSION));
+if (!empty($photo)) {
 
-if($type != "jpg" && $type != "jpeg" && $type != "png"){
-    die("Invalid file. Only JPG, JPEG and PNG are allowed.");
+    $extension = strtolower(pathinfo($photo, PATHINFO_EXTENSION));
+
+    if (
+        $extension != "jpg" &&
+        $extension != "jpeg" &&
+        $extension != "png"
+    ) {
+        die("Only JPG, JPEG and PNG files are allowed.");
+    }
+
+    if ($_FILES['photo']['size'] > 2 * 1024 * 1024) {
+        die("Image size must not exceed 2 MB.");
+    }
+
+    move_uploaded_file($tmp, "uploads/" . $photo);
 }
 
-if($_FILES['photo']['size'] > 2 * 1024 * 1024){
-    die("File size must not exceed 2MB.");
-}
 
-move_uploaded_file($tmp, "uploads/" . $photo);
+// =======================
+// INSERT STUDENT
+// =======================
 
-// SQL query to insert data
-$sql = "INSERT INTO students (reg_no, full_name, course, gender, email, photo)
-VALUES ('$reg_no', '$full_name', '$course', '$gender', '$email', '$photo')";;
+$stmt = $conn->prepare("
+INSERT INTO students
+(reg_no, full_name, course, gender, phone, email, photo)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+");
 
-// Execute the query
-if (mysqli_query($conn, $sql)) {
+$stmt->bind_param(
+    "sssssss",
+    $reg_no,
+    $full_name,
+    $course,
+    $gender,
+    $phone,
+    $email,
+    $photo
+);
+
+if ($stmt->execute()) {
+
     echo "<h2>Student Registered Successfully!</h2>";
 
-    echo "<a href='add_student.php'>Register Another Student</a><br><br>";
+    echo "<br>";
+
+    echo "<a href='add_student.php'>Register Another Student</a>";
+
+    echo "<br><br>";
 
     echo "<a href='view_students.php'>View Students</a>";
-} else {
-    echo "Error: " . mysqli_error($conn);
-}
 
-// Close the database connection
-mysqli_close($conn);
+} else {
+
+    echo "Error: " . $stmt->error;
+
+}
+logActivity($conn, $_SESSION['user'], "Added Student");
+
+$stmt->close();
+$conn->close();
 
 ?>

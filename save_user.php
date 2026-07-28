@@ -26,21 +26,17 @@ if(mysqli_num_rows($result) > 0){
 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
 // Insert user into the database
-$sql = "INSERT INTO users(full_name, email, password, role)
-VALUES('$fullname', '$email', '$hashed_password', '$role')";
+$stmt = $conn->prepare("INSERT INTO users(full_name,email,password,role) VALUES(?,?,?,?)");
 
-if(mysqli_query($conn, $sql)){
+$stmt->bind_param("ssss", $fullname, $email, $hashed_password, $role);
 
-    echo "<h2>Registration Successful!</h2>";
-
-    echo "<a href='login.php'>Click here to Login</a>";
-
+if($stmt->execute()){
+    echo "Registration Successful";
+}else{
+    echo "Registration Failed";
 }
-else{
 
-    echo "Registration Failed: " . mysqli_error($conn);
-
-}
+$stmt->close();
 
 mysqli_close($conn);
 
